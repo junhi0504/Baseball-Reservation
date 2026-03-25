@@ -80,8 +80,9 @@ MySQL
 
 ### 좌석 예약  
 
-좌석 예약 요청 시 트랜잭션 기반으로 데이터 정합성을 보장하며  
-예약 성공 시 reservationId가 생성되고 좌석 상태가 RESERVED로 변경됩니다.
+좌석 예약 요청이 성공하면 Reservation 테이블에 새로운 예약 데이터가 생성됩니다.
+
+- **예약 성공 시**: `Reservation` 테이블에 경기(game_id), 좌석(seat_id), 사용자 정보가 포함된 데이터 생성.
 
 <img width="1297" height="699" alt="image" src="https://github.com/user-attachments/assets/c640ea25-22b7-4d90-b7dd-7910a578c612" />
 <img width="734" height="705" alt="image" src="https://github.com/user-attachments/assets/9969abf8-97f0-419a-a0be-e0261bb04501" />
@@ -90,11 +91,10 @@ MySQL
 
 ---
 
-### 🎫 예약 내역 관리 및 좌석 점유 확인
+### 예약 취소
 
-사용자가 좌석을 선택하여 예약을 완료하면 `Reservation` 테이블에 새로운 레코드가 생성되며, 취소 시 해당 데이터가 삭제되어 다시 예약 가능한 상태가 됩니다.
+예약 취소 시 해당 데이터가 삭제되어 다시 예약 가능한 상태가 됩니다.
 
-- **예약 성공 시**: `Reservation` 테이블에 경기(game_id), 좌석(seat_id), 사용자 정보가 포함된 데이터 생성.
 - **예약 취소 시**: 해당 예약 ID의 레코드가 삭제(Hard Delete)되어 좌석 점유 해제.
 
 <img width="729" height="852" alt="image" src="https://github.com/user-attachments/assets/edb88451-472f-4559-8a21-a6fdc6508857" />
