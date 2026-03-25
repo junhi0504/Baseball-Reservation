@@ -1,142 +1,259 @@
 # ⚾ Baseball Reservation System
 
-대규모 트래픽 상황에서도 데이터 무결성을 보장하는 **야구 경기 티켓 예매 백엔드 시스템**입니다.  
-실제 서비스 수준의 동시성 처리, 트랜잭션 관리, 그리고 도메인 주도 설계(DDD) 경험을 목표로 개발했습니다.
+대규모 트래픽 상황에서 좌석 중복 예약을 방지하는  
+**야구 경기 티켓 예약 백엔드 시스템 프로젝트**입니다.
+
+실제 티켓 예매 서비스를 가정하여  
+동시성 처리 / 트랜잭션 관리 / 도메인 설계 경험을 목표로 개발했습니다.
 
 ---
 
 ## 📌 Project Goal
 
-- **대규모 트래픽 대응**: 예매 오픈 시 발생하는 동시성 문제를 이해하고 해결하는 경험.
-- **데이터 무결성 보장**: 중복 예약 방지 및 올바른 트랜잭션 처리 능력 향상.
-- **유지보수 가능한 도메인 설계**: 비즈니스 로직을 도메인 엔티티 내부에 캡슐화하는 설계 적용.
-- **RESTful API 설계 및 문서화**: Swagger를 통한 직관적인 API 명세 및 테스트 환경 구축.
+- 예약 시스템 백엔드 구조 설계 경험
+- 동시성 문제 해결 경험
+- RESTful API 설계 능력 향상
+- JPA 기반 트랜잭션 처리 이해
+- 유지보수 가능한 도메인 구조 설계
 
 ---
 
 ## 🧠 System Architecture
 
-```text
+```
 Client
-  ↓
+ ↓
 Controller
-  ↓
+ ↓
 Service
-  ↓
+ ↓
 Repository (JPA)
-  ↓
+ ↓
 MySQL
-🔥 확장 구조 (실서비스 고려 설계)
-실제 서비스 환경을 가정하여, 단일 서버의 한계를 극복하기 위한 아키텍처를 구상했습니다.
+```
 
-Plaintext
+### 🔥 확장 구조 (실서비스 고려)
+
+```
 Client
-  ↓
-Nginx (Load Balancer)
-  ↓
-Spring Boot Server (Multi Instance)
-  ↓
+ ↓
+Nginx
+ ↓
+Spring Server (Multi Instance)
+ ↓
 Redis (Distributed Lock / Cache)
-  ↓
+ ↓
 MySQL
-📊 ERD & Domain Analysis
-코드 스니펫
-erDiagram
-    User ||--o{ Reservation : manages
-    Game ||--o{ Seat : has
-    Seat ||--o{ Reservation : booked_by
+```
 
-    User {
-        long id PK
-        string name
-        string email
-    }
-    Game {
-        long id PK
-        string stadium
-        date gameDate
-    }
-    Seat {
-        long id PK
-        string seatNumber
-        string status
-        long gameId FK
-    }
-    Reservation {
-        long id PK
-        long userId FK
-        long seatId FK
-        timestamp reservedAt
-    }
-핵심 도메인 규칙
-User 1 : N Reservation: 한 사용자는 여러 개의 예매 내역을 가질 수 있습니다.
+---
 
-Seat 1 : 1 Reservation: 하나의 좌석은 오직 한 명의 사용자에게만 예매될 수 있습니다. (중복 예약 방지)
+## 📊 ERD
 
-Game 1 : N Seat: 하나의 경기는 여러 개의 좌석을 가집니다.
+```
+User
+ - id
+ - name
+ - email
 
-🔥 Main Features & API Showcase
-1. 전체 API 명세 (Swagger UI)
-프로젝트 실행 후 모든 API 엔드포인트를 시각적으로 확인하고 직접 테스트할 수 있도록 구축했습니다.
+Game
+ - id
+ - stadium
+ - gameDate
 
-2. 핵심 로직: 예매 취소 API 테스트 성공
-@PathVariable 이름 명시적 선언을 통해 400 에러를 해결한 후, 정상적으로 예매 취소가 작동하는 모습입니다.
+Seat
+ - id
+ - seatNumber
+ - status
+ - gameId
 
-🚨 Concurrency Handling Strategy (동시성 처리 전략)
-해결 전략: 비관적 락(Pessimistic Lock) & 트랜잭션 범위 확장
-문제: Seat 조회 후 상태 변경 전에 다른 트랜잭션이 접근하여 동일 좌석을 "예약 가능"으로 인식하는 문제 발생.
+Reservation
+ - id
+ - userId
+ - seatId
+ - reservedAt
+```
 
-해결: 좌석 조회(findById) 단계에서 비관적 락을 적용하여 다른 트랜잭션의 접근을 원천 차단.
+### 관계
 
-효과: 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 원자적(Atomic)으로 처리하여 데이터 일관성 확보.
+```
+User 1 --- N Reservation
+Seat 1 --- 1 Reservation
+Game 1 --- N Seat
+```
 
-핵심 코드
-Java
+---
+
+## 🔥 Main Features
+
+### ✅ 경기 조회
+- 경기 목록 조회
+- 경기 상세 조회
+
+### ✅ 좌석 조회
+- 경기별 좌석 상태 조회
+- 예약 가능 좌석 확인
+
+### ✅ 좌석 예약
+- 좌석 예약 요청
+- 중복 예약 방지
+- 트랜잭션 기반 처리
+
+### ✅ 예약 취소
+- 예약 내역 조회
+- 예약 취소 처리
+
+---
+
+## 🚨 Concurrency Handling Strategy
+
+### 문제 상황
+예매 오픈 시 여러 사용자가 동시에 동일 좌석 예약 시도
+
+### 해결 전략
+- `@Transactional` 적용
+- 좌석 예약 상태 검증
+- 예약 완료 시 상태 즉시 변경
+
+### 핵심 코드
+
+```java
 @Transactional
 public void reserveSeat(Long userId, Long seatId) {
-    // 1. 좌석 조회 (비관적 락 적용 추천)
+
     Seat seat = seatRepository.findById(seatId)
             .orElseThrow(() -> new RuntimeException("Seat not found"));
 
-    // 2. 좌석 상태 검증
     if (seat.isReserved()) {
         throw new RuntimeException("이미 예약된 좌석입니다.");
     }
 
-    // 3. 도메인 로직 실행 (상태 변경)
-    seat.reserve(); 
+    seat.reserve();
 
-    // 4. 예약 정보 저장
     Reservation reservation = new Reservation(userId, seat);
     reservationRepository.save(reservation);
 }
-🧪 Trouble Shooting
-✅ API 파라미터 인식 오류 해결 (400 Bad Request)
-문제: 특정 컨트롤러에서 경로 변수(@PathVariable)가 인식되지 않아 API 호출 실패.
+```
 
-원인: 컴파일 시 파라미터 이름 보존 문제로 이름 불일치 현상 발생.
+---
 
-해결: @PathVariable(name = "id")와 같이 이름을 명시적으로 선언하여 해결.
+## 🧪 Trouble Shooting
 
-✅ N+1 문제 해결
-상황: 연관 객체 조회 시 쿼리가 폭발적으로 발생하는 현상 발생.
+### ❗ 중복 예약 발생
 
-해결: JPA의 Fetch Join을 적용하여 한 번의 쿼리로 연관 데이터를 가져오도록 개선.
+**원인**
+Seat 조회 후 상태 변경 전에 다른 트랜잭션 접근 가능
 
-🛠 Tech Stack
-Language: Java 17
+**해결**
+- 트랜잭션 범위 확장
+- 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 처리
 
-Framework: Spring Boot 3.x
+---
 
-Data: Spring Data JPA, MySQL
+### ❗ N+1 문제
 
-Build Tool: Gradle
+**해결**
+- Fetch Join 적용
+- DTO 조회 방식으로 개선
 
-API Documentation: Swagger (Springdoc OpenAPI)
+---
 
-👨‍💻 Developer
-김준희 Backend Developer
+## 📮 API Example
 
-GitHub: https://github.com/junhi0504
+### 좌석 예약
 
-Email: junhi0504@naver.com
+**Request**
+
+```
+POST /api/reservations
+```
+
+```json
+{
+  "userId": 1,
+  "gameId": 2,
+  "seatNumber": "A-10"
+}
+```
+
+**Success Response**
+
+```json
+{
+  "status": "SUCCESS",
+  "reservationId": 3
+}
+```
+
+**Fail Response**
+
+```json
+{
+  "status": "FAIL",
+  "message": "이미 예약된 좌석입니다."
+}
+```
+
+---
+
+## 📷 Result Screen (Example)
+
+### 🔵 Swagger Test
+
+```
+POST /api/reservations
+
+Response 200 OK
+reservationId : 5
+```
+
+### 🟢 Seat Status
+
+```
+A-1 예약가능
+A-2 예약완료
+A-3 예약가능
+A-4 예약완료
+```
+
+---
+
+## 🛠 Tech Stack
+
+- Java 17
+- Spring Boot
+- Spring Data JPA
+- MySQL
+- Gradle
+
+---
+
+## 🚀 Run
+
+```bash
+git clone https://github.com/junhi0504/Baseball-Reservation.git
+cd Baseball-Reservation
+./gradlew bootRun
+```
+
+---
+
+## 📈 Future Improvement
+
+- Redis Distributed Lock
+- 동시성 테스트 코드 작성 (Thread 기반)
+- JWT Authentication
+- Test Code (JUnit / Mockito)
+- Docker
+- AWS Deploy
+- 좌석 예매 프론트 UI 구현
+
+---
+
+## 👨‍💻 Developer
+
+김준희  
+Backend Developer (Java / Spring)
+
+GitHub  
+https://github.com/junhi0504
