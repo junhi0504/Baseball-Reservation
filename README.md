@@ -108,27 +108,55 @@ Game 1 --- N Seat
 
 ---
 
-## Concurrency Handling Strategy
+## Concurrency Handling Strategy (Revised)
 
-### Problem
+### 1. Problem: Race Condition (경쟁 상태)
 
-예매 오픈 시 여러 사용자가 동시에 동일 좌석 예약을 시도하는 상황에서
-좌석 중복 예약이 발생할 수 있음.
+현상
+동일 좌석에 대해 여러 사용자가 동시에 예약 요청을 보낼 때
+두 트랜잭션이 동시에 `isReserved == false` 상태를 읽어 모두 예약을 성공시키는 정합성 오류가 발생할 수 있음.
 
-### Solution
+원인
+단순 SELECT 후 UPDATE 방식은 데이터 조회와 수정 사이에 다른 트랜잭션이 개입할 수 있는 간격이 존재함.
 
-* `@Transactional` 을 통한 원자적 처리
-* 예약 전 좌석 상태 검증
-* 예약 완료 즉시 좌석 상태 변경
-* 좌석 상태 변경과 예약 저장을 하나의 트랜잭션으로 처리
+---
 
-### Core Logic
+### 2. Solution: Pessimistic Lock 적용
+
+데이터 정합성을 최우선으로 고려하여 DB 레벨에서 락을 제어하는 비관적 락 전략을 적용함.
+
+메커니즘
+
+* `SELECT ... FOR UPDATE` 기반의 배타적 락 획득
+* 특정 트랜잭션이 좌석 데이터를 조회하는 시점부터 락을 보유
+* 다른 트랜잭션은 해당 좌석 접근 시 대기 상태(Blocking)
+
+선택 이유
+티켓팅 서비스 특성상 짧은 시간 내 동일 자원 충돌이 빈번하게 발생하므로
+재시도 비용이 발생하는 낙관적 락보다 비관적 락이 더 안정적이고 효율적이라 판단함.
+
+---
+
+### 3. Core Logic
+
+#### SeatRepository
+
+```java
+public interface SeatRepository extends JpaRepository<Seat, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Seat s where s.id = :id")
+    Optional<Seat> findByIdWithLock(@Param("id") Long id);
+}
+```
+
+#### ReservationService
 
 ```java
 @Transactional
 public void reserveSeat(Long userId, Long seatId) {
 
-    Seat seat = seatRepository.findById(seatId)
+    Seat seat = seatRepository.findByIdWithLock(seatId)
             .orElseThrow(() -> new RuntimeException("Seat not found"));
 
     if (seat.isReserved()) {
@@ -144,24 +172,35 @@ public void reserveSeat(Long userId, Long seatId) {
 
 ---
 
-## Trouble Shooting
+## Trouble Shooting (Updated)
 
-### Duplicate Reservation Issue
+### 1. Duplicate Reservation 및 DB Deadlock 방지
 
 Cause
-좌석 조회 후 상태 변경 전에 다른 트랜잭션이 동일 좌석에 접근 가능
+다수의 트랜잭션이 락 획득을 위해 대기하면서 DB 커넥션 풀이 고갈되거나
+상호 락 대기로 인해 Deadlock 발생 가능성이 존재함.
 
 Resolution
 
-* 트랜잭션 범위 확장
-* 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 수행
+* Lock Timeout 설정을 통해 무한 대기 방지
+* 트랜잭션 범위를 최소화하여 락 유지 시간 단축
+* 좌석 조회 → 상태 변경 → 예약 저장 로직을 빠르게 수행하도록 구조 개선
 
-### N+1 Problem
+---
+
+### 2. N+1 문제 해결을 통한 조회 성능 최적화
+
+Cause
+경기(Game) 목록 조회 시 연관된 좌석(Seat)을 Lazy Loading으로 조회하면서
+`1 + N` 쿼리가 발생하여 응답 속도가 저하됨.
 
 Resolution
 
-* Fetch Join 적용
-* DTO Projection 조회 방식으로 개선
+* Fetch Join
+  JPQL 조인 조회를 통해 연관 엔티티를 한 번의 쿼리로 조회하도록 개선
+
+* Batch Size
+  `default_batch_fetch_size` 설정을 통해 IN 절 기반 묶음 조회 수행
 
 ---
 
@@ -231,44 +270,6 @@ Fail Response
 
 ---
 
-## Concurrency Test Code
-
-```java
-@SpringBootTest
-class ConcurrencyTest {
-
-    @Autowired
-    ReservationService reservationService;
-
-    @Test
-    void 동시에_좌석_예약() throws InterruptedException {
-
-        int threadCount = 10;
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
-        CountDownLatch latch = new CountDownLatch(threadCount);
-
-        for (int i = 0; i < threadCount; i++) {
-            Long userId = (long) i + 1;
-
-            executorService.submit(() -> {
-                try {
-                    reservationService.reserveSeat(userId, 1L);
-                    System.out.println("Reservation Success userId = " + userId);
-                } catch (Exception e) {
-                    System.out.println("Reservation Fail userId = " + userId);
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        latch.await();
-    }
-}
-```
-
----
-
 ## Tech Stack
 
 * Java 21
@@ -292,8 +293,8 @@ cd Baseball-Reservation
 ## Future Improvement
 
 * Redis Distributed Lock 적용
-* Optimistic Lock (@Version) 적용
-* 동시성 테스트 고도화
+* Optimistic Lock (@Version) 전략 비교 실험
+* 동시성 테스트 자동화
 * JWT Authentication
 * Test Code (JUnit / Mockito)
 * Docker Containerization
