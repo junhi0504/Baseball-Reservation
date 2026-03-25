@@ -1,4 +1,3 @@
-Markdown
 # ⚾ Baseball Reservation System
 
 대규모 트래픽 상황에서도 데이터 무결성을 보장하는 **야구 경기 티켓 예매 백엔드 시스템**입니다.  
