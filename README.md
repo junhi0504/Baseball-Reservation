@@ -73,7 +73,8 @@ MySQL
 
 경기별 좌석 상태를 조회하여 예약 가능한 좌석을 확인할 수 있습니다.
 
-<img width="1008" height="924" alt="image" src="https://github.com/user-attachments/assets/6394b367-9e6b-4fc3-a0d3-b5de893bc69b" />
+<img width="994" height="898" alt="image" src="https://github.com/user-attachments/assets/71f69ec0-a308-4418-a2e0-98d8c74f83af" />
+
 
 
 ---
