@@ -60,27 +60,7 @@ MySQL
 
 ## 데이터 구조 (ERD)
 
-User  
-- id  
-- name  
-- email  
-
-Game  
-- id  
-- stadium  
-- gameDate  
-
-Seat  
-- id  
-- seatNumber  
-- status  
-- gameId  
-
-Reservation  
-- id  
-- userId  
-- seatId  
-- reservedAt  
+<img width="756" height="769" alt="image" src="https://github.com/user-attachments/assets/354b5cf9-b3de-44e9-8770-0a292b8e3282" />
 
 ---
 
