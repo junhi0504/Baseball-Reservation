@@ -7,15 +7,17 @@
 
 ## Project Goal
 
-* 예약 시스템 백엔드 구조 설계 경험
-* 동시성 문제 해결 경험
-* RESTful API 설계 능력 향상
+* 예약 시스템 백엔드 아키텍처 설계 경험
+* 동시성 문제 분석 및 해결 경험
+* RESTful API 설계 역량 강화
 * JPA 기반 트랜잭션 처리 이해
-* 유지보수 가능한 도메인 구조 설계
+* 유지보수 가능한 도메인 중심 구조 설계
 
 ---
 
 ## System Architecture
+
+### Basic Structure
 
 ```
 Client
@@ -29,7 +31,7 @@ Repository (JPA)
 MySQL
 ```
 
-### 확장 구조 (실서비스 고려)
+### Scalable Structure (Production Oriented)
 
 ```
 Client
@@ -96,8 +98,8 @@ Game 1 --- N Seat
 ### Seat Reservation
 
 * 좌석 예약 요청
-* 중복 예약 방지
-* 트랜잭션 기반 처리
+* 중복 예약 방지 로직 적용
+* 트랜잭션 기반 예약 처리
 
 ### Reservation Cancel
 
@@ -110,15 +112,17 @@ Game 1 --- N Seat
 
 ### Problem
 
-예매 오픈 시 여러 사용자가 동시에 동일 좌석 예약 시도
+예매 오픈 시 여러 사용자가 동시에 동일 좌석 예약을 시도하는 상황에서
+좌석 중복 예약이 발생할 수 있음.
 
 ### Solution
 
-* `@Transactional` 적용
-* 좌석 예약 상태 검증
-* 예약 완료 시 상태 즉시 변경
+* `@Transactional` 을 통한 원자적 처리
+* 예약 전 좌석 상태 검증
+* 예약 완료 즉시 좌석 상태 변경
+* 좌석 상태 변경과 예약 저장을 하나의 트랜잭션으로 처리
 
-### Core Code
+### Core Logic
 
 ```java
 @Transactional
@@ -142,22 +146,22 @@ public void reserveSeat(Long userId, Long seatId) {
 
 ## Trouble Shooting
 
-### Duplicate Reservation
+### Duplicate Reservation Issue
 
 Cause
-Seat 조회 후 상태 변경 전에 다른 트랜잭션 접근 가능
+좌석 조회 후 상태 변경 전에 다른 트랜잭션이 동일 좌석에 접근 가능
 
-Solution
+Resolution
 
 * 트랜잭션 범위 확장
-* 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 처리
+* 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 수행
 
 ### N+1 Problem
 
-Solution
+Resolution
 
 * Fetch Join 적용
-* DTO 조회 방식으로 개선
+* DTO Projection 조회 방식으로 개선
 
 ---
 
@@ -198,43 +202,32 @@ Fail Response
 
 ---
 
-## Result Screen Guide
+## Result Screen
 
 ### Seat Status Before Reservation
 
-```
-GET /api/games/1/seats
-```
-
-* 모든 좌석 상태가 AVAILABLE 인 화면 캡처
+* GET /api/games/1/seats
+* 모든 좌석 상태가 AVAILABLE 인 화면 스크린샷 첨부
 
 ### Reservation Success
 
-```
-POST /api/reservations
-```
-
-* SUCCESS 응답 및 reservationId 생성 화면 캡처
+* POST /api/reservations
+* SUCCESS 응답 및 reservationId 생성 화면 스크린샷 첨부
 
 ### Seat Status After Reservation
 
-```
-GET /api/games/1/seats
-```
-
-* 특정 좌석 상태가 RESERVED 로 변경된 화면 캡처
+* GET /api/games/1/seats
+* 특정 좌석 상태가 RESERVED 로 변경된 화면 스크린샷 첨부
 
 ### Duplicate Reservation Fail
 
-```
-POST /api/reservations
-```
-
-* 동일 좌석 재요청 시 FAIL 응답 화면 캡처
+* 동일 좌석 재예약 요청
+* FAIL 응답 화면 스크린샷 첨부
 
 ### Concurrency Test Result
 
-* 여러 Thread 동시 요청 시 콘솔 로그에서 1건 성공 / 나머지 실패 화면 캡처
+* Thread 기반 동시 요청 테스트 실행 콘솔 로그 스크린샷 첨부
+* 1건 성공 / 나머지 실패 결과 확인 가능
 
 ---
 
@@ -260,9 +253,9 @@ class ConcurrencyTest {
             executorService.submit(() -> {
                 try {
                     reservationService.reserveSeat(userId, 1L);
-                    System.out.println("예약 성공 userId = " + userId);
+                    System.out.println("Reservation Success userId = " + userId);
                 } catch (Exception e) {
-                    System.out.println("예약 실패 userId = " + userId);
+                    System.out.println("Reservation Fail userId = " + userId);
                 } finally {
                     latch.countDown();
                 }
@@ -298,13 +291,13 @@ cd Baseball-Reservation
 
 ## Future Improvement
 
-* Redis Distributed Lock
-* Optimistic Lock 적용
+* Redis Distributed Lock 적용
+* Optimistic Lock (@Version) 적용
 * 동시성 테스트 고도화
 * JWT Authentication
 * Test Code (JUnit / Mockito)
-* Docker
-* AWS Deploy
+* Docker Containerization
+* AWS Deployment
 * 좌석 예매 프론트 UI 구현
 
 ---
