@@ -153,7 +153,10 @@ Reservation
 
 이를 통해 데이터 정합성이 유지됨을 검증했습니다.
 
-![동시성 테스트](images/concurrency_test.png)
+<img width="727" height="678" alt="image" src="https://github.com/user-attachments/assets/bc56c4e7-db84-489a-b46f-578cfc282696" />
+<img width="736" height="704" alt="image" src="https://github.com/user-attachments/assets/c61d9c34-8c86-4a3e-a88e-05327f30d5c7" />
+
+
 
 ---
 
