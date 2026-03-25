@@ -60,7 +60,8 @@ MySQL
 
 ## 데이터 구조 (ERD)
 
-<img width="756" height="769" alt="image" src="https://github.com/user-attachments/assets/354b5cf9-b3de-44e9-8770-0a292b8e3282" />
+<img width="771" height="463" alt="image" src="https://github.com/user-attachments/assets/6e1d3c12-58f5-4308-9ea8-4cadb581931a" />
+
 
 ---
 
