@@ -1,156 +1,147 @@
-# Baseball Reservation System
+# Baseball Reservation System  
 
-대규모 트래픽 상황에서 좌석 중복 예약을 방지하는 야구 경기 티켓 예약 백엔드 시스템 프로젝트입니다.
-실제 티켓 예매 서비스를 가정하여 동시성 처리, 트랜잭션 관리, 도메인 설계 경험을 목표로 개발했습니다.
-
----
-
-## Project Goal
-
-* 예약 시스템 백엔드 아키텍처 설계 경험
-* 동시성 문제 분석 및 해결 경험
-* RESTful API 설계 역량 강화
-* JPA 기반 트랜잭션 처리 이해
-* 유지보수 가능한 도메인 중심 구조 설계
+대규모 트래픽 상황에서도 좌석 중복 예약이 발생하지 않도록 설계한 야구 경기 티켓 예매 백엔드 시스템입니다.  
+실제 티켓팅 서비스를 가정하여 동시성 처리, 트랜잭션 관리, 도메인 중심 설계 경험을 목표로 개발했습니다.
 
 ---
 
-## System Architecture
+## 프로젝트 목표  
 
-### Basic Structure
-
-```
-Client
- ↓
-Controller
- ↓
-Service
- ↓
-Repository (JPA)
- ↓
-MySQL
-```
-
-### Scalable Structure (Production Oriented)
-
-```
-Client
- ↓
-Nginx
- ↓
-Spring Server (Multi Instance)
- ↓
-Redis (Distributed Lock / Cache)
- ↓
-MySQL
-```
+- 실서비스 수준의 예약 시스템 백엔드 구조 설계 경험  
+- 동시 요청 상황에서 발생하는 동시성 문제 해결 경험  
+- REST API 설계 및 트랜잭션 처리 이해  
+- 유지보수 가능한 도메인 중심 구조 설계  
 
 ---
 
-## ERD
+## 프로젝트를 만든 이유  
 
-```
-User
- - id
- - name
- - email
+티켓 예매 서비스는 특정 시간에 많은 사용자가 동시에 접근하는 대표적인 고트래픽 시스템입니다.  
 
-Game
- - id
- - stadium
- - gameDate
-
-Seat
- - id
- - seatNumber
- - status
- - gameId
-
-Reservation
- - id
- - userId
- - seatId
- - reservedAt
-```
-
-### Relationship
-
-```
-User 1 --- N Reservation
-Seat 1 --- 1 Reservation
-Game 1 --- N Seat
-```
+이 프로젝트는 단순 CRUD 구현이 아니라  
+동일 좌석에 대한 중복 예약 문제를 실제로 어떻게 해결하는지 경험하기 위해 개발했습니다.
 
 ---
 
-## Main Features
+## 시스템 구조  
 
-### Game Inquiry
+### 기본 구조  
 
-* 경기 목록 조회
-* 경기 상세 조회
+Client  
+↓  
+Controller  
+↓  
+Service  
+↓  
+Repository (JPA)  
+↓  
+MySQL  
 
-### Seat Inquiry
+### 확장 가능한 구조 (실서비스 환경 가정)  
 
-* 경기별 좌석 상태 조회
-* 예약 가능 좌석 확인
-
-### Seat Reservation
-
-* 좌석 예약 요청
-* 중복 예약 방지 로직 적용
-* 트랜잭션 기반 예약 처리
-
-### Reservation Cancel
-
-* 예약 내역 조회
-* 예약 취소 처리
-
----
-
-## Concurrency Handling Strategy (Revised)
-
-### 1. Problem: Race Condition (경쟁 상태)
-
-현상
-동일 좌석에 대해 여러 사용자가 동시에 예약 요청을 보낼 때
-두 트랜잭션이 동시에 `isReserved == false` 상태를 읽어 모두 예약을 성공시키는 정합성 오류가 발생할 수 있음.
-
-원인
-단순 SELECT 후 UPDATE 방식은 데이터 조회와 수정 사이에 다른 트랜잭션이 개입할 수 있는 간격이 존재함.
+Client  
+↓  
+Nginx  
+↓  
+Spring Server (Multi Instance)  
+↓  
+Redis (Distributed Lock / Cache)  
+↓  
+MySQL  
 
 ---
 
-### 2. Solution: Pessimistic Lock 적용
+## 데이터 구조 (ERD)
 
-데이터 정합성을 최우선으로 고려하여 DB 레벨에서 락을 제어하는 비관적 락 전략을 적용함.
+### Entity  
 
-메커니즘
+User  
+- id  
+- name  
+- email  
 
-* `SELECT ... FOR UPDATE` 기반의 배타적 락 획득
-* 특정 트랜잭션이 좌석 데이터를 조회하는 시점부터 락을 보유
-* 다른 트랜잭션은 해당 좌석 접근 시 대기 상태(Blocking)
+Game  
+- id  
+- stadium  
+- gameDate  
 
-선택 이유
-티켓팅 서비스 특성상 짧은 시간 내 동일 자원 충돌이 빈번하게 발생하므로
-재시도 비용이 발생하는 낙관적 락보다 비관적 락이 더 안정적이고 효율적이라 판단함.
+Seat  
+- id  
+- seatNumber  
+- status  
+- gameId  
+
+Reservation  
+- id  
+- userId  
+- seatId  
+- reservedAt  
+
+### 관계  
+
+User 1 --- N Reservation  
+Seat 1 --- 1 Reservation  
+Game 1 --- N Seat  
 
 ---
 
-### 3. Core Logic
+## 주요 기능  
 
-#### SeatRepository
+### 경기 조회  
+- 경기 목록 조회  
+- 경기 상세 조회  
+
+### 좌석 조회  
+- 경기별 좌석 상태 조회  
+- 예약 가능 좌석 확인  
+
+### 좌석 예약  
+- 좌석 예약 요청 처리  
+- 중복 예약 방지 로직 적용  
+- 트랜잭션 기반 데이터 정합성 보장  
+
+### 예약 취소  
+- 예약 내역 조회  
+- 예약 취소 처리  
+
+---
+
+## 동시성 문제 해결 전략  
+
+### 문제 상황  
+
+여러 사용자가 동시에 동일 좌석을 예약하면  
+두 트랜잭션이 동시에 예약 가능 상태를 조회하여  
+중복 예약이 발생하는 Race Condition 문제가 발생할 수 있습니다.
+
+### 해결 방법  
+
+데이터 정합성을 최우선으로 고려하여 DB 비관적 락(Pessimistic Lock)을 적용했습니다.
+
+- SELECT ... FOR UPDATE 기반 배타적 락 획득  
+- 좌석 조회 시점부터 트랜잭션 종료까지 락 유지  
+- 다른 트랜잭션은 해당 좌석 접근 시 대기 상태  
+
+### 선택 이유  
+
+티켓팅 서비스는 짧은 시간 동안 동일 자원 충돌이 매우 빈번하게 발생합니다.  
+
+따라서 충돌 후 재시도가 필요한 낙관적 락보다  
+즉시 충돌을 차단하는 비관적 락이 더 안정적이라 판단했습니다.
+
+---
+
+## 핵심 예약 처리 로직  
+
+### SeatRepository  
 
 ```java
-public interface SeatRepository extends JpaRepository<Seat, Long> {
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select s from Seat s where s.id = :id")
-    Optional<Seat> findByIdWithLock(@Param("id") Long id);
-}
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("select s from Seat s where s.id = :id")
+Optional<Seat> findByIdWithLock(Long id);
 ```
 
-#### ReservationService
+### ReservationService  
 
 ```java
 @Transactional
@@ -172,47 +163,38 @@ public void reserveSeat(Long userId, Long seatId) {
 
 ---
 
-## Trouble Shooting (Updated)
+## 문제 해결 과정  
 
-### 1. Duplicate Reservation 및 DB Deadlock 방지
+### 중복 예약 및 Deadlock 방지  
 
-Cause
-다수의 트랜잭션이 락 획득을 위해 대기하면서 DB 커넥션 풀이 고갈되거나
-상호 락 대기로 인해 Deadlock 발생 가능성이 존재함.
+- Lock Timeout 설정으로 무한 대기 방지  
+- 트랜잭션 범위를 최소화하여 락 유지 시간 단축  
+- 예약 처리 로직을 단순화하여 빠르게 수행  
 
-Resolution
+### 조회 성능 개선 (N+1 문제 해결)  
 
-* Lock Timeout 설정을 통해 무한 대기 방지
-* 트랜잭션 범위를 최소화하여 락 유지 시간 단축
-* 좌석 조회 → 상태 변경 → 예약 저장 로직을 빠르게 수행하도록 구조 개선
-
----
-
-### 2. N+1 문제 해결을 통한 조회 성능 최적화
-
-Cause
-경기(Game) 목록 조회 시 연관된 좌석(Seat)을 Lazy Loading으로 조회하면서
-`1 + N` 쿼리가 발생하여 응답 속도가 저하됨.
-
-Resolution
-
-* Fetch Join
-  JPQL 조인 조회를 통해 연관 엔티티를 한 번의 쿼리로 조회하도록 개선
-
-* Batch Size
-  `default_batch_fetch_size` 설정을 통해 IN 절 기반 묶음 조회 수행
+- Fetch Join 적용  
+- default_batch_fetch_size 설정  
 
 ---
 
-## API Example
+## 동시성 테스트 결과  
 
-### Seat Reservation
+Thread 기반 동시 요청 테스트 수행  
 
-Request
+- 동일 좌석에 대해 여러 요청 발생  
+- 1건만 예약 성공  
+- 나머지는 예약 실패 응답  
 
-```
-POST /api/reservations
-```
+데이터 정합성 유지 확인  
+
+---
+
+## API 예시  
+
+### 좌석 예약  
+
+POST /api/reservations  
 
 ```json
 {
@@ -221,66 +203,19 @@ POST /api/reservations
 }
 ```
 
-Success Response
+---
 
-```json
-{
-  "status": "SUCCESS",
-  "reservationId": 3
-}
-```
+## 사용 기술  
 
-Fail Response
-
-```json
-{
-  "status": "FAIL",
-  "message": "이미 예약된 좌석입니다."
-}
-```
+- Java 21  
+- Spring Boot  
+- Spring Data JPA  
+- MySQL  
+- Gradle  
 
 ---
 
-## Result Screen
-
-### Seat Status Before Reservation
-
-* GET /api/games/1/seats
-* 모든 좌석 상태가 AVAILABLE 인 화면 스크린샷 첨부
-
-### Reservation Success
-
-* POST /api/reservations
-* SUCCESS 응답 및 reservationId 생성 화면 스크린샷 첨부
-
-### Seat Status After Reservation
-
-* GET /api/games/1/seats
-* 특정 좌석 상태가 RESERVED 로 변경된 화면 스크린샷 첨부
-
-### Duplicate Reservation Fail
-
-* 동일 좌석 재예약 요청
-* FAIL 응답 화면 스크린샷 첨부
-
-### Concurrency Test Result
-
-* Thread 기반 동시 요청 테스트 실행 콘솔 로그 스크린샷 첨부
-* 1건 성공 / 나머지 실패 결과 확인 가능
-
----
-
-## Tech Stack
-
-* Java 21
-* Spring Boot
-* Spring Data JPA
-* MySQL
-* Gradle
-
----
-
-## Run
+## 실행 방법  
 
 ```bash
 git clone https://github.com/junhi0504/Baseball-Reservation.git
@@ -290,23 +225,23 @@ cd Baseball-Reservation
 
 ---
 
-## Future Improvement
+## 향후 개선 계획  
 
-* Redis Distributed Lock 적용
-* Optimistic Lock (@Version) 전략 비교 실험
-* 동시성 테스트 자동화
-* JWT Authentication
-* Test Code (JUnit / Mockito)
-* Docker Containerization
-* AWS Deployment
-* 좌석 예매 프론트 UI 구현
+- Redis 분산 락 적용  
+- 낙관적 락(@Version) 성능 비교 실험  
+- 동시성 테스트 자동화  
+- JWT 인증 적용  
+- 테스트 코드 작성 (JUnit / Mockito)  
+- Docker 컨테이너 환경 구성  
+- AWS 배포  
+- 좌석 예매 프론트 UI 개발  
 
 ---
 
-## Developer
+## 개발자  
 
-김준희
-Backend Developer (Java / Spring)
+김준희  
+Backend Developer (Java / Spring)  
 
-GitHub
-https://github.com/junhi0504
+GitHub  
+https://github.com/junhi0504  
