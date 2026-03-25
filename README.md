@@ -1,10 +1,7 @@
 # Baseball Reservation System
 
-대규모 트래픽 상황에서 좌석 중복 예약을 방지하는
-야구 경기 티켓 예약 백엔드 시스템 프로젝트입니다.
-
-실제 티켓 예매 서비스를 가정하여
-동시성 처리 / 트랜잭션 관리 / 도메인 설계 경험을 목표로 개발했습니다.
+대규모 트래픽 상황에서 좌석 중복 예약을 방지하는 야구 경기 티켓 예약 백엔드 시스템 프로젝트입니다.
+실제 티켓 예매 서비스를 가정하여 동시성 처리, 트랜잭션 관리, 도메인 설계 경험을 목표로 개발했습니다.
 
 ---
 
@@ -74,7 +71,7 @@ Reservation
  - reservedAt
 ```
 
-### 관계
+### Relationship
 
 ```
 User 1 --- N Reservation
@@ -86,23 +83,23 @@ Game 1 --- N Seat
 
 ## Main Features
 
-### 경기 조회
+### Game Inquiry
 
 * 경기 목록 조회
 * 경기 상세 조회
 
-### 좌석 조회
+### Seat Inquiry
 
 * 경기별 좌석 상태 조회
 * 예약 가능 좌석 확인
 
-### 좌석 예약
+### Seat Reservation
 
 * 좌석 예약 요청
 * 중복 예약 방지
 * 트랜잭션 기반 처리
 
-### 예약 취소
+### Reservation Cancel
 
 * 예약 내역 조회
 * 예약 취소 처리
@@ -111,17 +108,17 @@ Game 1 --- N Seat
 
 ## Concurrency Handling Strategy
 
-### 문제 상황
+### Problem
 
 예매 오픈 시 여러 사용자가 동시에 동일 좌석 예약 시도
 
-### 해결 전략
+### Solution
 
 * `@Transactional` 적용
 * 좌석 예약 상태 검증
 * 예약 완료 시 상태 즉시 변경
 
-### 핵심 코드
+### Core Code
 
 ```java
 @Transactional
@@ -145,19 +142,19 @@ public void reserveSeat(Long userId, Long seatId) {
 
 ## Trouble Shooting
 
-### 중복 예약 발생
+### Duplicate Reservation
 
-원인
+Cause
 Seat 조회 후 상태 변경 전에 다른 트랜잭션 접근 가능
 
-해결
+Solution
 
 * 트랜잭션 범위 확장
 * 좌석 상태 변경과 예약 저장을 동일 트랜잭션에서 처리
 
-### N+1 문제
+### N+1 Problem
 
-해결
+Solution
 
 * Fetch Join 적용
 * DTO 조회 방식으로 개선
@@ -166,7 +163,7 @@ Seat 조회 후 상태 변경 전에 다른 트랜잭션 접근 가능
 
 ## API Example
 
-### 좌석 예약
+### Seat Reservation
 
 Request
 
@@ -177,8 +174,7 @@ POST /api/reservations
 ```json
 {
   "userId": 1,
-  "gameId": 2,
-  "seatNumber": "A-10"
+  "seatId": 3
 }
 ```
 
@@ -202,24 +198,80 @@ Fail Response
 
 ---
 
-## Result Screen (Example)
+## Result Screen Guide
 
-Swagger Test
+### Seat Status Before Reservation
+
+```
+GET /api/games/1/seats
+```
+
+* 모든 좌석 상태가 AVAILABLE 인 화면 캡처
+
+### Reservation Success
 
 ```
 POST /api/reservations
-
-Response 200 OK
-reservationId : 5
 ```
 
-Seat Status
+* SUCCESS 응답 및 reservationId 생성 화면 캡처
+
+### Seat Status After Reservation
 
 ```
-A-1 예약가능
-A-2 예약완료
-A-3 예약가능
-A-4 예약완료
+GET /api/games/1/seats
+```
+
+* 특정 좌석 상태가 RESERVED 로 변경된 화면 캡처
+
+### Duplicate Reservation Fail
+
+```
+POST /api/reservations
+```
+
+* 동일 좌석 재요청 시 FAIL 응답 화면 캡처
+
+### Concurrency Test Result
+
+* 여러 Thread 동시 요청 시 콘솔 로그에서 1건 성공 / 나머지 실패 화면 캡처
+
+---
+
+## Concurrency Test Code
+
+```java
+@SpringBootTest
+class ConcurrencyTest {
+
+    @Autowired
+    ReservationService reservationService;
+
+    @Test
+    void 동시에_좌석_예약() throws InterruptedException {
+
+        int threadCount = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            Long userId = (long) i + 1;
+
+            executorService.submit(() -> {
+                try {
+                    reservationService.reserveSeat(userId, 1L);
+                    System.out.println("예약 성공 userId = " + userId);
+                } catch (Exception e) {
+                    System.out.println("예약 실패 userId = " + userId);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+    }
+}
 ```
 
 ---
@@ -247,7 +299,8 @@ cd Baseball-Reservation
 ## Future Improvement
 
 * Redis Distributed Lock
-* 동시성 테스트 코드 작성 (Thread 기반)
+* Optimistic Lock 적용
+* 동시성 테스트 고도화
 * JWT Authentication
 * Test Code (JUnit / Mockito)
 * Docker
