@@ -1,6 +1,7 @@
 # Baseball Reservation System  
 
-![main](images/main.png)
+<img width="780" height="819" alt="image" src="https://github.com/user-attachments/assets/3174f2dc-5cec-4a9b-8658-828d58252036" />
+
 
 대규모 트래픽 상황에서도 좌석 중복 예약이 발생하지 않도록 설계한  
 야구 경기 티켓 예매 백엔드 시스템입니다.  
@@ -89,7 +90,8 @@ Reservation
 
 경기별 좌석 상태를 조회하여 예약 가능한 좌석을 확인할 수 있습니다.
 
-![좌석 조회](images/seat_before.png)
+<img width="733" height="852" alt="image" src="https://github.com/user-attachments/assets/1ad0ce74-0922-4bb7-9a2f-63d31c842355" />
+
 
 ---
 
@@ -98,23 +100,35 @@ Reservation
 좌석 예약 요청 시 트랜잭션 기반으로 데이터 정합성을 보장하며  
 예약 성공 시 reservationId가 생성되고 좌석 상태가 RESERVED로 변경됩니다.
 
-![예약 성공](images/reservation_success.png)
+<img width="1297" height="699" alt="image" src="https://github.com/user-attachments/assets/c640ea25-22b7-4d90-b7dd-7910a578c612" />
+<img width="734" height="705" alt="image" src="https://github.com/user-attachments/assets/9969abf8-97f0-419a-a0be-e0261bb04501" />
 
 ---
 
-### 좌석 상태 변경  
+---
 
-예약 이후 좌석 상태가 AVAILABLE → RESERVED로 변경되는 것을 확인할 수 있습니다.
+### 🎫 예약 내역 관리 및 좌석 점유 확인
 
-![좌석 상태 변경](images/seat_after.png)
+사용자가 좌석을 선택하여 예약을 완료하면 `Reservation` 테이블에 새로운 레코드가 생성되며, 취소 시 해당 데이터가 삭제되어 다시 예약 가능한 상태가 됩니다.
+
+- **예약 성공 시**: `Reservation` 테이블에 경기(game_id), 좌석(seat_id), 사용자 정보가 포함된 데이터 생성.
+- **예약 취소 시**: 해당 예약 ID의 레코드가 삭제(Hard Delete)되어 좌석 점유 해제.
+
+<img width="729" height="852" alt="image" src="https://github.com/user-attachments/assets/edb88451-472f-4559-8a21-a6fdc6508857" />
+<img width="749" height="679" alt="image" src="https://github.com/user-attachments/assets/fa4506f2-f63d-4cea-aee5-79baa7636847" />
+
+
+*JPA의 `repository.save()`와 `repository.delete()`를 통해 데이터의 생성과 소멸을 관리합니다.*
 
 ---
+
 
 ### 중복 예약 실패  
 
 이미 예약된 좌석에 대해 다시 요청할 경우 실패 응답을 반환합니다.
 
-![중복 예약 실패](images/duplicate_fail.png)
+<img width="746" height="693" alt="image" src="https://github.com/user-attachments/assets/953ebc3c-675e-4b0f-a5b3-8a09b0cf633c" />
+
 
 ---
 
